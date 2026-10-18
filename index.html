@@ -52,10 +52,10 @@ td.err{font-weight:bold}
   <p class="nota">Prototipo de baja fidelidad con datos de ejemplo. Elige un perfil para ver cómo cambia lo que se muestra.</p>
   <div class="caja">
     <label for="usr">Usuario</label><input type="text" id="usr" autocomplete="off">
-    <label for="pwd">Contraseña</label><input type="password" id="pwd" autocomplete="off">
+    <label for="pwd">Contraseña</label><input type="password" id="pwd" autocomplete="off" minlength="8" aria-describedby="pwdAyuda"><div class="ruta" id="pwdAyuda">Mínimo 8 caracteres.</div>
     <label for="perfil">Perfil</label>
     <select id="perfil"><option>Corredor</option><option>Analista tributario</option><option>Administrador</option></select>
-    <p class="error" id="loginErr" hidden>Escribe tu usuario y tu contraseña para entrar.</p>
+    <p class="error" id="loginErr" role="alert" hidden></p>
     <div class="fila"><button class="pri" id="entrar">Ingresar</button></div>
   </div>
 </section>
@@ -135,8 +135,10 @@ function ir(id){
   if(id==='registro')pintaReg();
 }
 $('#entrar').onclick=()=>{
-  if(!$('#usr').value.trim()||!$('#pwd').value){$('#loginErr').hidden=false;return}
-  $('#loginErr').hidden=true;perfil=$('#perfil').value;ir(navPorPerfil[perfil][0]);
+  const e=$('#loginErr');
+  if(!$('#usr').value.trim()||!$('#pwd').value){e.textContent='Escribe tu usuario y tu contraseña para entrar.';e.hidden=false;return}
+  if($('#pwd').value.length<8){e.textContent='La contraseña debe tener al menos 8 caracteres. No se puede ingresar con una más corta.';e.hidden=false;return}
+  e.hidden=true;$('#pwd').value='';perfil=$('#perfil').value;ir(navPorPerfil[perfil][0]);
 };
 $('#tipo').onchange=()=>{$('#tipoNota').hidden=$('#tipo').selectedIndex===0};
 
