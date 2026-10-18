@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prototipo: Mantenedor de Calificaciones Tributarias</title>
+<style>
+:root{--bg:#fff;--fg:#000;--muted:#555;--soft:#ececec;--line:#000;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--fg:#fff;--muted:#aaa;--soft:#222;--line:#fff}}
+:root[data-theme="dark"]{--bg:#000;--fg:#fff;--muted:#aaa;--soft:#222;--line:#fff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Arial,Helvetica,sans-serif;line-height:1.45}
+header{border-bottom:3px solid var(--line);padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
+header strong{font-size:1.05rem}
+.ruta{color:var(--muted);font-size:.9rem}
+nav{display:flex;gap:8px;flex-wrap:wrap}
+main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.4rem;margin:0 0 4px}
+p.nota{margin:0 0 16px;color:var(--muted);font-size:.9rem}
+.pantalla{display:none}
+.caja{border:2px solid var(--line);padding:16px;margin-bottom:16px}
+label{display:block;font-weight:bold;margin:12px 0 4px}
+input[type=text],input[type=password],select{width:100%;max-width:420px;padding:9px;border:2px solid var(--line);background:var(--bg);color:var(--fg);font:inherit}
+button,.btn{font:inherit;font-weight:bold;padding:8px 16px;border:2px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;display:inline-block}
+button.pri{background:var(--fg);color:var(--bg)}
+button:disabled{border-style:dashed;color:var(--muted);cursor:not-allowed;background:var(--bg)}
+button:focus-visible,input:focus-visible,select:focus-visible,.btn:focus-within{outline:3px solid var(--fg);outline-offset:2px}
+nav button.act{background:var(--fg);color:var(--bg)}
+.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.tabla{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{border:2px solid var(--line);padding:7px 9px;text-align:left}
+th{background:var(--soft)}
+td.err{font-weight:bold}
+.error{font-style:italic;margin:10px 0 0}
+.ok{margin:10px 0 0;font-weight:bold}
+.bloq{color:var(--muted)}
+.vacio{border:2px dashed var(--line);padding:20px;text-align:center;color:var(--muted)}
+@media (max-width:560px){header{padding:10px 12px}main{padding:14px 12px 32px}}
+</style>
+</head>
+<body>
+<header>
+  <div><strong>Mantenedor de Calificaciones Tributarias</strong><div class="ruta" id="ruta">Inicio de sesión</div></div>
+  <nav id="nav" aria-label="Secciones"></nav>
+</header>
+<main>
+
+<section id="login" class="pantalla">
+  <h1>Iniciar sesión</h1>
+  <p class="nota">Prototipo de baja fidelidad con datos de ejemplo. Elige un perfil para ver cómo cambia lo que se muestra.</p>
+  <div class="caja">
+    <label for="usr">Usuario</label><input type="text" id="usr" autocomplete="off">
+    <label for="pwd">Contraseña</label><input type="password" id="pwd" autocomplete="off">
+    <label for="perfil">Perfil</label>
+    <select id="perfil"><option>Corredor</option><option>Analista tributario</option><option>Administrador</option></select>
+    <p class="error" id="loginErr" hidden>Escribe tu usuario y tu contraseña para entrar.</p>
+    <div class="fila"><button class="pri" id="entrar">Ingresar</button></div>
+  </div>
+</section>
+
+<section id="carga" class="pantalla">
+  <h1>Carga masiva por CSV</h1>
+  <p class="nota">Sube el archivo, revisa la previsualización y confirma. Si alguna fila tiene error, no se guarda nada.</p>
+  <div class="caja">
+    <label for="tipo">Tipo de carga</label>
+    <select id="tipo"><option>Factores (DJ1948)</option><option>Montos (DJ1948)</option></select>
+    <p class="nota" id="tipoNota" hidden>En este prototipo solo se simula la carga de factores.</p>
+    <label for="arch">Archivo</label>
+    <div class="fila">
+      <label class="btn" style="margin:0">Examinar<input type="file" id="arch" accept=".csv" hidden></label>
+      <span id="nomArch">Ningún archivo seleccionado</span>
+    </div>
+    <div class="fila">
+      <span>¿Sin archivo a mano? Usa uno de ejemplo:</span>
+      <button id="ejOk">Ejemplo válido</button><button id="ejErr">Ejemplo con errores</button>
+    </div>
+  </div>
+  <div id="prev" hidden>
+    <h2 style="font-size:1.1rem;margin:0">Previsualización</h2>
+    <div class="tabla"><table><thead><tr><th>Fila</th><th>Instrumento</th><th>Ejercicio</th><th>Suma factores 8 al 19</th><th>Estado</th></tr></thead><tbody id="prevBody"></tbody></table></div>
+    <div id="prevMsg"></div>
+    <div class="fila"><button id="cancelar">Cancelar</button><button class="pri" id="confirmar" disabled>Confirmar carga</button></div>
+  </div>
+  <div id="resCarga"></div>
+</section>
+
+<section id="consulta" class="pantalla">
+  <h1>Consulta de calificaciones</h1>
+  <p class="nota" id="consNota"></p>
+  <label for="busq" style="margin-top:0">Buscar por instrumento</label>
+  <input type="text" id="busq" autocomplete="off">
+  <div class="tabla"><table><thead><tr><th>Instrumento</th><th>Ejercicio</th><th>Suma factores 8 al 19</th><th>Origen</th><th>Corredora</th><th>Acciones</th></tr></thead><tbody id="consBody"></tbody></table></div>
+  <p class="nota" id="consEstado" role="status" style="margin-top:10px"></p>
+</section>
+
+<section id="registro" class="pantalla">
+  <h1>Registro de operaciones</h1>
+  <p class="nota">Solo lectura: nadie puede editar ni eliminar estos registros. Incluye datos de ejemplo.</p>
+  <div class="tabla"><table><thead><tr><th>Hora</th><th>Perfil</th><th>Acción</th><th>Detalle</th><th>Origen</th></tr></thead><tbody id="regBody"></tbody></table></div>
+</section>
+
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>String(parseFloat(n.toFixed(8))).replace('.',',');
+const hora=()=>new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+const MIA='Corredora A';
+let perfil=null,nextId=10,pend=null;
+let datos=[
+ {id:1,ins:'AGUAS-A',eje:2025,suma:1,orig:'Bolsa',cor:'Bolsa',of:true},
+ {id:2,ins:'BCI-F',eje:2025,suma:0.98,orig:'Bolsa',cor:'Bolsa',of:true},
+ {id:3,ins:'SQM-B',eje:2025,suma:0.9,orig:'Carga masiva',cor:MIA,of:false},
+ {id:4,ins:'COPEC',eje:2025,suma:1,orig:'Manual',cor:MIA,of:false},
+ {id:5,ins:'ENEL-AM',eje:2025,suma:0.85,orig:'Carga masiva',cor:'Corredora B',of:false}
+];
+let log=[
+ {h:'09:12',p:'Corredor',a:'Carga masiva',d:'2 calificaciones',o:'Carga masiva'},
+ {h:'10:40',p:'Corredor',a:'Modificar',d:'COPEC: factor_8 de 0,5 a 0,4',o:'Manual'}
+];
+const rutas={login:'Inicio de sesión',carga:'Carga masiva',consulta:'Consulta de calificaciones',registro:'Registro de operaciones'};
+const navPorPerfil={'Corredor':['carga','consulta'],'Analista tributario':['consulta'],'Administrador':['consulta','registro']};
+function ir(id){
+  document.querySelectorAll('.pantalla').forEach(s=>s.style.display='none');
+  $('#'+id).style.display='block';
+  $('#ruta').textContent=perfil?perfil+' > '+rutas[id]:rutas[id];
+  const nav=$('#nav');nav.innerHTML='';
+  if(perfil){
+    navPorPerfil[perfil].forEach(k=>{const b=document.createElement('button');b.textContent=rutas[k];if(k===id)b.className='act';b.onclick=()=>ir(k);nav.appendChild(b)});
+    const o=document.createElement('button');o.textContent='Cerrar sesión';o.onclick=()=>{perfil=null;ir('login')};nav.appendChild(o);
+  }
+  if(id==='consulta')pintaCons();
+  if(id==='registro')pintaReg();
+}
+$('#entrar').onclick=()=>{
+  if(!$('#usr').value.trim()||!$('#pwd').value){$('#loginErr').hidden=false;return}
+  $('#loginErr').hidden=true;perfil=$('#perfil').value;ir(navPorPerfil[perfil][0]);
+};
+$('#tipo').onchange=()=>{$('#tipoNota').hidden=$('#tipo').selectedIndex===0};
+
+/* carga masiva */
+const cols=['instrumento','ejercicio'];for(let k=8;k<=19;k++)cols.push('factor_'+k);
+const csv=filas=>[cols.join(','),...filas.map(f=>f.join(','))].join('\n');
+const ejOk=csv([['CMPC',2025,.2,.1,.1,.05,.05,.05,.1,.1,.05,.05,.05,.05],['LTM',2025,.25,.25,.1,.1,.1,.1,.05,.05,0,0,0,0],['FALABELLA',2025,.3,.2,.1,.1,.1,.05,.05,.05,0,0,0,0]]);
+const ejErr=csv([['CMPC',2025,.2,.1,.1,.05,.05,.05,.1,.1,.05,.05,.05,.05],['LTM',2025,.25,'abc',.1,.1,.1,.1,.05,.05,0,0,0,0],['FALABELLA',2025,.3,.3,.1,.1,.1,.05,.05,.05,0,0,0,0]]);
+function analiza(texto){
+  const l=texto.replace(/\r/g,'').split('\n').filter(x=>x.trim());
+  if(!l.length)return{error:'El archivo está vacío.'};
+  const sep=l[0].includes(';')?';':',';
+  const h=l[0].split(sep).map(s=>s.trim().toLowerCase());
+  const falta=cols.find(c=>!h.includes(c));
+  if(falta)return{error:'Formato inválido: falta la columna «'+falta+'». Usa la plantilla estándar.'};
+  const filas=l.slice(1).map((ln,i)=>{
+    const c=ln.split(sep),g=n=>(c[h.indexOf(n)]||'').trim();
+    let suma=0,err=null;
+    for(let k=8;k<=19&&!err;k++){const v=g('factor_'+k).replace(',','.');if(v===''||isNaN(Number(v))||Number(v)<0)err='valor no numérico en factor_'+k;else suma+=Number(v)}
+    if(!err&&suma>1.00000001)err='la suma de los factores 8 al 19 es '+fmt(suma)+' y no puede superar 1';
+    return{n:i+1,ins:g('instrumento'),eje:g('ejercicio'),suma:err?null:suma,err};
+  });
+  return{filas};
+}
+function carga(texto,nombre){
+  $('#nomArch').textContent=nombre;$('#resCarga').innerHTML='';
+  if(!/\.csv$/i.test(nombre)){mostrarErr('Solo se aceptan archivos .csv.');return}
+  const r=analiza(texto);
+  if(r.error){mostrarErr(r.error);return}
+  pend=r.filas;
+  $('#prevBody').innerHTML=pend.map(f=>'<tr><td>'+f.n+'</td><td>'+esc(f.ins)+'</td><td>'+esc(f.eje)+'</td><td>'+(f.suma===null?'-':fmt(f.suma))+'</td><td'+(f.err?' class="err">Error':'>OK')+'</td></tr>').join('');
+  const errs=pend.filter(f=>f.err);
+  $('#prevMsg').innerHTML=errs.length?errs.map(f=>'<p class="error">Fila '+f.n+': '+esc(f.err)+'.</p>').join('')+'<p class="error">No se guardará nada hasta que corrijas el archivo.</p>':'<p class="ok">Todas las filas son válidas. Revisa y confirma.</p>';
+  $('#confirmar').disabled=errs.length>0;$('#prev').hidden=false;
+}
+function mostrarErr(m){pend=null;$('#prev').hidden=true;$('#resCarga').innerHTML='<p class="error">'+esc(m)+'</p>'}
+$('#arch').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>carga(String(r.result),f.name);r.readAsText(f);e.target.value=''};
+$('#ejOk').onclick=()=>carga(ejOk,'ejemplo_valido.csv');
+$('#ejErr').onclick=()=>carga(ejErr,'ejemplo_con_errores.csv');
+$('#cancelar').onclick=()=>{pend=null;$('#prev').hidden=true;$('#nomArch').textContent='Ningún archivo seleccionado';$('#resCarga').innerHTML=''};
+$('#confirmar').onclick=()=>{
+  if(!pend||pend.some(f=>f.err))return;
+  pend.forEach(f=>datos.push({id:nextId++,ins:f.ins,eje:f.eje,suma:f.suma,orig:'Carga masiva',cor:MIA,of:false}));
+  log.push({h:hora(),p:perfil,a:'Carga masiva',d:pend.length+' calificaciones',o:'Carga masiva'});
+  const n=pend.length;$('#cancelar').click();
+  $('#resCarga').innerHTML='<p class="ok">Carga confirmada: '+n+' calificaciones guardadas y registradas.</p>';
+};
+
+/* consulta */
+function visibles(){return perfil==='Corredor'?datos.filter(d=>d.of||d.cor===MIA):datos}
+function pintaCons(){
+  $('#consNota').textContent=perfil==='Corredor'?'Ves las calificaciones de tu corredora y los datos oficiales de la Bolsa (bloqueados).':'Ves las calificaciones de todas las corredoras, solo en lectura.';
+  const q=$('#busq').value.trim().toLowerCase();
+  const f=visibles().filter(d=>d.ins.toLowerCase().includes(q));
+  $('#consBody').innerHTML=f.length?f.map(d=>{
+    let a;
+    if(d.of)a='<span class="bloq">Bloqueado: dato oficial</span>';
+    else if(perfil==='Corredor')a='<button data-e="'+d.id+'">Editar</button> <button data-x="'+d.id+'">Eliminar</button>';
+    else a='<span class="bloq">Solo lectura</span>';
+    return '<tr><td>'+esc(d.ins)+'</td><td>'+esc(d.eje)+'</td><td>'+fmt(d.suma)+'</td><td>'+d.orig+'</td><td>'+d.cor+'</td><td>'+a+'</td></tr>';
+  }).join(''):'<tr><td colspan="6" class="vacio">No hay calificaciones con ese instrumento. Prueba con otro nombre o limpia la búsqueda.</td></tr>';
+}
+$('#busq').oninput=pintaCons;
+$('#consBody').onclick=e=>{
+  const x=e.target.dataset.x,ed=e.target.dataset.e;
+  if(x){const d=datos.find(r=>r.id==x);datos=datos.filter(r=>r.id!=x);log.push({h:hora(),p:perfil,a:'Eliminar',d:d.ins,o:'Manual'});$('#consEstado').textContent='Calificación '+d.ins+' eliminada y registrada.';pintaCons()}
+  if(ed)$('#consEstado').textContent='La pantalla de edición no está incluida en este prototipo.';
+};
+function pintaReg(){$('#regBody').innerHTML=log.map(l=>'<tr><td>'+l.h+'</td><td>'+esc(l.p)+'</td><td>'+l.a+'</td><td>'+esc(l.d)+'</td><td>'+l.o+'</td></tr>').join('')}
+ir('login');
+</script>
+</body>
+</html>
